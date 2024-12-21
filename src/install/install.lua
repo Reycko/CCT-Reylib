@@ -37,11 +37,12 @@ local Github = {
 
 local FILES = {
   ["src/paste.lua"] = "paste.lua",
-  ["VERSION"] = "VERSION"
+  ["src/github.lua"] = "github.lua",
+  ["VERSION"] = "VERSION",
 }
 
 local RUN = {
-  ["src/install/mkstartup.lua"] = {}
+  ["src/install/mkstartup.lua"] = {},
 }
 
 fs.delete("/libs/reylib")
