@@ -1,3 +1,4 @@
+---@class Paste
 return {
   ---Gets paste from it's ID
   ---@param id string ID of the paste

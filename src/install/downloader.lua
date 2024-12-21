@@ -1,7 +1,7 @@
 --- Advanced Reylib downloader
 --- @return boolean succeded
 
--- If you wanna paste from this note that the "modules" are just necessary functions to prevent bloat thus are incomplete
+-- If you wanna paste from this, note that the "modules" are just necessary functions to prevent bloat thus are incomplete
 
 local args = { ---@type { [string]: boolean }
   ["auto"] = false,
@@ -112,39 +112,40 @@ local function print(...)
   if (not args["silent"]) then _print(...) end
 end
 
-local paste = {
-  ---Gets paste from it's ID
-  ---@param id string ID of the paste
-  ---@return string?
-  get = function (self, id)
-    local response = http.get("https://pastebin.com/raw/" .. textutils.urlEncode(id) .. "?cb=" .. ("%x"):format(math.random(0, 2 ^ 30)))
-  
+---@class Github
+local Github = {
+  ---Gets a file from a GitHub repo
+  ---@param self Github
+  ---@param repo string Repository to look in, should be formatted as Author/Repo
+  ---@param location string String location of the file
+  ---@param branch? string Defaults to 'master'
+  ---@return string File data as string
+  getFile = function (self, repo, location, branch)
+    branch = branch or "master"
+    local response = http.get("https://raw.githubusercontent.com/" .. textutils.urlEncode(repo) .. "/refs/heads/" .. textutils.urlEncode(branch) .. "/" .. location .. "?cb=" .. ("%x"):format(math.random(0, 2^30)))
     if (response) then
-      local headers = response.getResponseHeaders() ---@type table
-      if (not headers["Content-Type"] or not headers["Content-Type"]:find("^text/plain")) then
-        return nil
-      end
+      local res = response.readAll()
+      response.close()
+      return res
     end
-  
-    local res = response.readAll() ---@type string
-    response.close()
 
-    return res
+    return ""
   end,
 
-  ---Runs paste from it's ID
-  ---@param id string ID of the paste
-  ---@param ... any Arguments to pass
-  ---@return any ... Make sure to check if it's not nil
-  run = function (self, id, ...)
-    local res = self:get(id)
-  
-    if (res) then
-      local func = load(res, id, "t", _ENV)
-      if not func then return nil end
-  
-      return func(...)
-    end
+  ---Gets a file from a GitHub repo, then executes it
+  ---@param self Github
+  ---@param repo string Repository to look in, should be formatted as Author/Repo
+  ---@param location string String location of the file
+  ---@param branch? string Defaults to 'master'
+  ---@param env? table Environment to pass, defaults to _ENV
+  ---@param ... any Arguments to pass to the script
+  ---@return any? return Whatever the executed script returns, or nil if it couldn't be executed
+  runFile = function (self, repo, location, branch, env, ...)
+    branch = branch or "master"
+    env = env or _ENV
+    local file = self:getFile(repo, location)
+
+    load(file, location .. "@" .. repo .. " (GitHub)", "t", env)(...)
   end
 }
 
@@ -163,20 +164,20 @@ local function main()
     if (not args["auto"] and ask("Reylib is already downloaded (v" .. table.concat(rlVersion, ".") .. ").\nDo you want to update [u] or remove [r]?", {"u", "r"}) or (args["update"] and not args["remove"])) then
       -- update
       local shouldUpdate = true
-      local rawLatestVersion = paste:get("fneVWbfM")
+      local rawLatestVersion = Github:getFile("Reycko/CCT-Reylib", "VERSION")
       if (not rawLatestVersion) then
         print("WARN: Couldn't fetch what the lastest version is")
       else
         shouldUpdate = versions:lessThan(rlVersion, versions:parse(rawLatestVersion))
 
         print("Downloading " .. rawLatestVersion .. ".")
-        paste:run("tc8igxvz")
+        Github:runFile("Reycko/CCT-Reylib", "src/install/install.lua")
       end
     else
       -- remove
       if (not fs.exists("/libs/reylib/remove.lua")) then
-        print("Couldn't find downloader. Downloading latest one.")
-        paste:run("DGJW230q")
+        print("Couldn't find remover. Downloading latest one.")
+        Github:runFile("Reycko/CCT-Reylib", "src/install/remove.lua")
       else
 ---@diagnostic disable-next-line: undefined-field
         os.run({}, "/libs/reylib/remove.lua")
@@ -186,7 +187,7 @@ local function main()
   else
     if (not args["auto"] and ask("Do you want to download Reylib?") or (args["download"])) then
           print("Downloading Reylib.")
-          paste:run("tc8igxvz")
+          Github:runFile("Reycko/CCT-Reylib", "src/install/install.lua")
 
           return true
     end

@@ -1,11 +1,8 @@
-local paste = require(".libs.reylib.paste") ---@module 'src.paste'
+local Github = require(".libs.reylib.github") ---@module 'src.github'
 
-local data = "---Reylib auto updater---\n"
+local data = [[---Reylib auto updater, avoid touching this file.
 
-data = data .. "local paste = " .. paste:get("Yd1xVYfw"):sub(8) .. "\n"
-
-data = data .. [[
-paste:run("GSqi5v2z", "silent", "auto", "update")
+require(.libs.reylib.github):runFile("Reycko/CCT-Reylib", "src/install/downloader.lua", "master", {}, "silent", "auto", "update")
 ]]
 
 fs.makeDir("/startup")

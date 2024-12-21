@@ -1,5 +1,5 @@
 ---@class Github
-local Github = {
+return {
   ---Gets a file from a GitHub repo
   ---@param self Github
   ---@param repo string Repository to look in, should be formatted as Author/Repo
@@ -34,30 +34,3 @@ local Github = {
     load(file, location .. "@" .. repo .. " (GitHub)", "t", env)(...)
   end
 }
-
-local FILES = {
-  ["src/paste.lua"] = "paste.lua",
-  ["VERSION"] = "VERSION"
-}
-
-local RUN = {
-  ["src/install/mkstartup.lua"] = {}
-}
-
-fs.delete("/libs/reylib")
-fs.makeDir("/libs/reylib")
-for location, file in pairs(FILES) do
-  local data = Github:getFile("Reycko/CCT-Reylib", location)
-  if (not data) then
-    print("WARN: Couldn't get file " .. location .. " (supposed to go in " .. file .. ")")
-  end
-    local f = io.open("/libs/reylib/" .. file, "w")
-    if (not f) then goto continue end
-
-    f:write(data or "--Couldn't fetch!")
-  ::continue::
-end
-
-for location, args in pairs(RUN) do
-  Github:runFile("Reycko/CCT-Reylib", location, "master", _ENV, table.unpack(args))
-end
