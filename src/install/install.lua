@@ -52,10 +52,11 @@ for location, file in pairs(FILES) do
   if (not data) then
     print("WARN: Couldn't get file " .. location .. " (supposed to go in " .. file .. ")")
   end
-    local f = io.open("/libs/reylib/" .. file, "w")
-    if (not f) then goto continue end
 
-    f:write(data or "--Couldn't fetch!")
+  local f = io.open("/libs/reylib/" .. file, "w")
+  if (not f) then goto continue end
+
+  f:write(data or "--Couldn't fetch!")
   ::continue::
 end
 
