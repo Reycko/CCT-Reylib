@@ -29,11 +29,11 @@ local versions = {
   ---@return table versionTable
   parse = function (self, version)
     local versionTable = {}
-  
+
     for v in version:gmatch("[^%.]+") do
       table.insert(versionTable, tonumber(v))
     end
-  
+
     return versionTable
   end,
 
@@ -43,7 +43,7 @@ local versions = {
   ---@return boolean
   equal = function (self, current, other)
     if (#current ~= #other) then return false end
-    
+
     for i in #current do
       if (current[i] ~= other[i]) then return false end
     end
@@ -56,8 +56,14 @@ local versions = {
   ---@param other number[] Other version, as a table
   ---@return boolean
   lessThan = function (self, current, other)
+    if (#current ~= #other) then return false end
+
     for i=1,#current do
-      if (current[i] < other[i]) then return true end
+      if (current[i] < other[i]) then
+        return true
+      elseif (current[i] > other[i]) then
+        return false
+      end
     end
 
     return false
@@ -160,7 +166,6 @@ local function main()
   local rlDownloaded, rlVersion = findReylib()
 
   if (rlDownloaded) then
-    
     if (not args["auto"] and ask("Reylib is already downloaded (v" .. table.concat(rlVersion, ".") .. ").\nDo you want to update [u] or remove [r]?", {"u", "r"}) or (args["update"] and not args["remove"])) then
       -- update
       local shouldUpdate = true
@@ -171,13 +176,13 @@ local function main()
         shouldUpdate = versions:lessThan(rlVersion, versions:parse(rawLatestVersion))
 
         print("Downloading " .. rawLatestVersion .. ".")
-        Github:runFile("Reycko/CCT-Reylib", "src/install/install.lua")
+        Github:runFile("Reycko/CCT-Reylib", "src/install/install.lua", "master", _G)
       end
     else
       -- remove
       if (not fs.exists("/libs/reylib/remove.lua")) then
         print("Couldn't find remover. Downloading latest one.")
-        Github:runFile("Reycko/CCT-Reylib", "src/install/remove.lua")
+        Github:runFile("Reycko/CCT-Reylib", "src/install/remove.lua", "master", _G)
       else
 ---@diagnostic disable-next-line: undefined-field
         os.run({}, "/libs/reylib/remove.lua")
@@ -187,7 +192,7 @@ local function main()
   else
     if (not args["auto"] and ask("Do you want to download Reylib?") or (args["download"])) then
           print("Downloading Reylib.")
-          Github:runFile("Reycko/CCT-Reylib", "src/install/install.lua")
+          Github:runFile("Reycko/CCT-Reylib", "src/install/install.lua", "master", _G)
 
           return true
     end
