@@ -13,4 +13,5 @@ end
 fs.delete("/libs/reylib")
 if (#fs.list("/libs") == 0) then fs.delete("/libs") end -- I doubt many scripts make a /libs folder.
 fs.delete("/startup/reylib_auto.lua")
+if (#fs.list("/startup") == 0) then fs.delete("/startup") end
 print("Removed Reylib.")

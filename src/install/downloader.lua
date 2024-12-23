@@ -230,14 +230,12 @@ local function main()
       -- update
       local shouldUpdate = true
       local rawLatestVersion = github.getFile("Reycko/CCT-Reylib", "VERSION")
-      if (not rawLatestVersion) then
-        print("WARN: Couldn't fetch what the lastest version is")
-      else
-        shouldUpdate = versionfns.lessThan(rlVersion, versionfns.parse(rawLatestVersion))
-        if (not args["auto"] and not shouldUpdate) then
-          shouldUpdate = ask("You already have the latest version of Reylib.\nAre you sure you want to download it anyway?", nil, true)
-        end
+      shouldUpdate = versionfns.lessThan(rlVersion, versionfns.parse(rawLatestVersion))
+      if (not args["auto"] and not shouldUpdate) then
+        shouldUpdate = ask("You already have the latest version of Reylib.\nAre you sure you want to download it anyway?", nil, true)
+      end
 
+      if (shouldUpdate) then
         print("Downloading " .. rawLatestVersion .. ".")
         github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", "master", _G)
       end
@@ -245,7 +243,7 @@ local function main()
       -- remove
       if (not fs.exists("/libs/reylib/programs/remove.lua")) then
         print("Couldn't find remover. Downloading latest one.")
-        github.runFile("Reycko/CCT-Reylib", "src/install/remove.lua", "master", _G)
+        github.runFile("Reycko/CCT-Reylib", "src/programs/remove.lua", "master", _G)
       else
 ---@diagnostic disable-next-line: undefined-field
         os.run({}, "/libs/reylib/remove.lua")
