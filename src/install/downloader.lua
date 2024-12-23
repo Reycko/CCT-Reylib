@@ -246,7 +246,7 @@ local function main()
         github.runFile("Reycko/CCT-Reylib", "src/programs/remove.lua", "master", _G)
       else
 ---@diagnostic disable-next-line: undefined-field
-        os.run({}, "/libs/reylib/remove.lua")
+        os.run({}, "/libs/reylib/programs/remove.lua")
       end
     end
 
