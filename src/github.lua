@@ -1,5 +1,5 @@
 ---@alias GitHubFolder_FileType "dir"|"file"|"submodule"
----@alias GitHubFolder { name: string, path: string, sha: string, size: number, url: string, html_url: string, git_url: string, download_url?: string, type: GitHubFolder_FileType, _links: { self: string, git: string, html: string } } The API response to GitHub's repos/{repo}/contents API
+---@alias GitHubFolder { name: string, path: string, sha: string, size: number, url: string, html_url: string, git_url: string, download_url?: string, type: GitHubFolder_FileType, _links: { self: string, git: string, html: string } }[] The API response to GitHub's repos/{repo}/contents API
 
 local function checkHttp()
   if (not http) then
