@@ -90,23 +90,35 @@ local versionfns = {
   end,
 }
 
+local function checkHttp()
+  if (not http) then
+    error("no http library", 3)
+  end
+
+  if (not http.checkURL("https://github.com")) then
+    error("can't contact github", 3)
+  end
+end
+
 local github
 github = {
   ---Gets a file from a GitHub repo
   ---@param repo string Repository to look in, should be formatted as Author/Repo
   ---@param location string String location of the file
   ---@param branch? string Defaults to 'master'
-  ---@return string File data as string
+  ---@return string file data as string
   getFile = function (repo, location, branch)
+    checkHttp()
     branch = branch or "master"
-    local response = http.get("https://raw.githubusercontent.com/" .. textutils.urlEncode(repo) .. "/refs/heads/" .. textutils.urlEncode(branch) .. "/" .. location .. "?cb=" .. ("%x"):format(math.random(0, 2^30)))
+    local response, err = http.get("https://raw.githubusercontent.com/" .. textutils.urlEncode(repo) .. "/refs/heads/" .. textutils.urlEncode(branch) .. "/" .. location .. "?cb=" .. ("%x"):format(math.random(0, 2^30)))
     if (response) then
       local res = response.readAll()
       response.close()
+      if (not res) then error("couldn't read file (empty response, possibly nonexistent file)") end
       return res
     end
 
-    return ""
+    error("couldn't read file (" .. tostring(err) .. ")", 2)
   end,
 
   ---Gets a file from a GitHub repo, then executes it
@@ -117,11 +129,13 @@ github = {
   ---@param ... any Arguments to pass to the script
   ---@return any? return Whatever the executed script returns, or nil if it couldn't be executed
   runFile = function (repo, location, branch, env, ...)
+    checkHttp()
     branch = branch or "master"
-    env = env or _ENV
     local file = github.getFile(repo, location)
 
-    load(file, location .. "@" .. repo .. " (GitHub)", "t", env)(...)
+    local func, err = load(file, location .. "@" .. repo .. " (GitHub)", "t", env)
+    if (not func) then error("couldn't load file (" .. err .. ")", 2) end
+    pcall(func, ...)
   end
 }
 
