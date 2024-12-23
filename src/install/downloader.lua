@@ -182,11 +182,11 @@ local function ask(question, choices, default_no)
 
   local autocomplete_function = function (partial) require("cc.completion").choice(partial, choices) end
   print(question .. " [" .. (not default_no and choices[1]:upper() or choices[1]:lower()) .. "/" .. (default_no and choices[2]:upper() or choices[2]:lower()) .. "]")
-  local input = read(nil, nil, autocomplete_function):lower():sub(1, 1) --- @type string
+  local input = read(nil, nil, autocomplete_function):lower():sub(1, 1)
   if (default_no) then
-    return input == choices[1]:lower()
+    return input ~= choices[1]:lower()
   else
-    return input ~= choices[2]:lower()
+    return input == choices[2]:lower()
   end
 end
 
