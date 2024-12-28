@@ -1,122 +1,98 @@
-local VersionMeta
-
-local isVersion = function (self)
-  return type(self) == "table" and getmetatable(self) == VersionMeta
-end
+local versionUtils = require(".libs.reylib.versionUtils") ---@module "src.versionUtils"
 
 ---Helper class to parse and use semantic versions
 ---@class Version
 ---@field major number
 ---@field minor number
 ---@field patch number
-Version = {
-  ---Parses a version into a tuple of numbers
-  ---@param version string
-  ---@return number ...
-  parse = function (version)
-    local found = {} ---@type number[]
+local Version = {}
+Version.__index = Version
 
-    for v in version:gmatch("[^%.]+") do -- gmatch returns an iterator, so we can't directly put it in found
-      local number = tonumber(v, 10)
-      if (not number or number < 0) then error("Invalid version '" .. version .. "'", 2) end
+---Makes a new `Version`, which is then parsed
+---@param version string|{[1]: number, [2]: number, [3]: number} Semantic verion, string separated by dots or as a table
+---@return Version
+function Version.new(version)
+  local self = setmetatable({}, Version)
 
-      table.insert(found, number)
-    end
+  if (type(version) == "string") then
+    self.major, self.minor, self.patch = table.unpack(versionUtils.parse(version))
+  elseif (type(version) == "table") then
+    if (#version ~= 3) then error("invalid semantic version (expected 3 values, got " .. #version .. ")") end
+    self.major, self.minor, self.patch = table.unpack(version)
+  else
+    error("bad argument #1 (string or table expected, got " .. type(version) .. ")", 2)
+  end
 
-    if (#found ~= 3) then error("invalid semantic version (expected 3 values, got " .. #found .. ")") end
-    return table.unpack(found)
-  end,
+  return self
+end
 
-  ---Compares two versions and returns whether or not the current version is the same
-  ---@param self Version
-  ---@param other Version
-  ---@return boolean
-  equal = function (self, other)
-    if (not isVersion(self)) then error("bad argument #1 (version expected, got " .. type(self) .. ")", 2) end
-    if (not isVersion(other)) then error("bad argument #2 (version expected, got " .. type(other) .. ")", 2) end
+---Compares two versions and returns whether or not the current version is the same
+---@param self Version
+---@param other Version
+---@return boolean
+function Version:equal(other)
+  return (self.major == other.major and
+          self.minor == other.minor and
+          self.patch == other.patch)
+end
 
-    return (self.major == other.major and
-            self.minor == other.minor and
-            self.patch == other.patch)
-  end,
+---Compares two versions and returns whether or not the current version is lower
+---@param self Version
+---@param other Version
+---@return boolean
+function Version:lessThan(other)
+  if (self.major ~= other.major) then
+    return self.major < other.major
+  elseif (self.minor ~= other.minor) then
+    return self.minor < other.minor
+  else
+    return self.patch < other.patch
+  end
+end
 
-  ---Compares two versions and returns whether or not the current version is lower
-  ---@param self Version
-  ---@param other Version
-  ---@return boolean
-  lessThan = function (self, other)
-    if (not isVersion(self)) then error("bad argument #1 (version expected, got " .. type(self) .. ")", 2) end
-    if (not isVersion(other)) then error("bad argument #2 (version expected, got " .. type(other) .. ")", 2) end
+---Compares two versions and returns whether or not the current version is greater
+---@param self Version
+---@param other Version
+---@return boolean
+function Version:greaterThan(other)
+  if (self.major ~= other.major) then
+    return self.major > other.major
+  elseif (self.minor ~= other.minor) then
+    return self.minor > other.minor
+  else
+    return self.patch > other.patch
+  end
+end
 
-    return (self.major < other.major or
-            self.minor < other.minor or
-            self.patch < other.patch)
-  end,
+---Parses a version into a tuple of numbers
+---@deprecated This function is only kept for compatibility. Use the function with the same name from versionUtils.
+---@param version string
+---@return number ...
+function Version.parse(version)
+  local found = {} ---@type number[]
 
-  ---Compares two versions and returns whether or not the current version is greater
-  ---@param self Version
-  ---@param other Version
-  ---@return boolean
-  greaterThan = function (self, other)
-    if (not isVersion(self)) then error("bad argument #1 (version expected, got " .. type(self) .. ")", 2) end
-    if (not isVersion(other)) then error("bad argument #2 (version expected, got " .. type(other) .. ")", 2) end
+  for v in version:gmatch("[^%.]+") do
+    local number = tonumber(v, 10)
+    if (not number or number < 0) then error("Invalid version '" .. version "'", 2) end -- Errors should NOT be formatted like this. Kept for compatibility.
 
-    if (self.major ~= other.major) then
-      return self.major > other.major
-    elseif (self.minor ~= other.minor) then
-      return self.minor > other.minor
-    else
-      return self.patch > other.patch
-    end
-  end,
+    table.insert(found, number)
+  end
 
-  ---Makes a new `Version`, which is then parsed
-  ---@param self Version
-  ---@param version string|{[1]: number, [2]: number, [3]: number} Semantic verion, string separated by dots or as a table
-  ---@return Version
-  new = function (self, version)
-    local major, minor, patch
+  if (#found ~= 3) then error("invalid semantic version (expected 3 values, got " .. #found .. ")") end
+  return table.unpack(found)
+end
 
-    if (type(version) == "string") then
-      major, minor, patch = self.parse(version)
-    elseif (type(version) == "table") then
-      if (#version ~= 3) then error("invalid semantic version (expected 3 values, got " .. #version .. ")") end
-      major, minor, patch = table.unpack(version)
-    else
-      error("bad argument #1 (string or table expected, got " .. type(version) .. ")", 2)
-    end
+Version.__name = "version"
 
-    return setmetatable({
-      major = major,
-      minor = minor,
-      patch = patch,
-    }, VersionMeta)
-  end,
-}
+Version.__eq = Version.equal
+Version.__lt = Version.lessThan
 
----Version metatable
----@type metatable
-VersionMeta = {
-  __name = "Version",
-  ---@param self Version
-  __tostring = function (self)
-    return string.format("%u.%u.%u", self.major, self.minor, self.patch)
-  end,
+function Version:__tostring()
+  return string.format("%u.%u.%u", self.major, self.minor, self.patch)
+end
 
-  __eq = Version.equal,
-  __lt = Version.lessThan,
-  __index = Version,
-
-  ---@param self Version
-  __le = function (self, other)
-    return self:lessThan(other) or self:equal(other)
-  end,
-
-  ---@param self Version
-  __concat = function (self)
-    return string.format("%u.%u.%u", self.major, self.minor, self.patch)
-  end,
-}
-
+function Version:__le(other)
+  return self:lessThan(other) or self:equal(other)
+end
 
 return Version

@@ -8,87 +8,86 @@
 -- These are defined here because this downloader should have no dependencies.
 
 --[[
-We'll use versionfns instead of the `Version` class as it's more portable and this script is meant to stay short.
+We'll use versionUtils instead of the `Version` class as it's more portable and this script is meant to stay short.
 ]]
 
 ---Multiple helper functions for versions
-local versionfns = {
-  ---Parses the version \
-  ---Unlike the `Version` class, this returns it as a table instead of a tuple
-  ---to fit the other functions
-  ---@deprecated Use version class instead
-  ---@param version string
-  ---@return table versionTable
-  parse = function (version)
-    local found = {} ---@type number[]
+local versionUtils = {}
 
-    for v in version:gmatch("[^%.]+") do -- gmatch returns an iterator, so we can't directly put it in found
-      local number = tonumber(v, 10)
-      if (not number or number < 0) then error("Invalid version '" .. version .. "'", 2) end
+---Parses the version \
+---Unlike the `Version` class, this returns it as a table instead of a tuple
+---to fit the other functions
+---@param version string
+---@return table versionTable
+function versionUtils.parse(version)
+  local found = {} ---@type number[]
 
-      table.insert(found, number)
+  for v in version:gmatch("[^%.]+") do -- gmatch returns an iterator, so we can't directly put it in found
+    local number = tonumber(v, 10)
+    if (not number or number < 0) then error("invalid semantic version (" .. version .. ")", 2) end
+
+    table.insert(found, number)
+  end
+
+  if (#found ~= 3) then error("bad argument #1 (expected 3 values, got " .. #found .. ")") end
+  return found
+end
+
+---Compares two versions and returns whether or not the current version is the same
+---@deprecated Use version class instead
+---@param current number[] Current version, as a table
+---@param other number[] Other version, as a table
+---@return boolean
+function versionUtils.equal(current, other)
+  if (#other ~= 3) then error("bad argument #2 (expected 3 values, got " .. #other .. ")", 2) end
+  if (#current ~= 3) then error("bad argument #1 (expected 3 values, got " .. #other .. ")", 2) end
+
+  for i in #current do
+    if (current[i] ~= other[i]) then return false end
+  end
+
+  return true
+end
+
+---Compares two versions and returns whether or not the current version is lower
+---@deprecated Use version class instead
+---@param current number[] Current version, as a table
+---@param other number[] Other version, as a table
+---@return boolean
+function versionUtils.lessThan(current, other)
+  if (#other ~= 3) then error("bad argument #2 (expected 3 values, got " .. #other .. ")", 2) end
+  if (#current ~= 3) then error("bad argument #1 (expected 3 values, got " .. #other .. ")", 2) end
+
+  for i=1,#current do
+    if (current[i] < other[i]) then
+      return true
+    elseif (current[i] > other[i]) then
+      return false
     end
+  end
 
-    if (#found ~= 3) then error("invalid semantic version (expected 3 values, got " .. #found .. ")") end
-    return found
-  end,
+  return false
+end
 
-  ---Compares two versions and returns whether or not the current version is the same
-  ---@deprecated Use version class instead
-  ---@param current number[] Current version, as a table
-  ---@param other number[] Other version, as a table
-  ---@return boolean
-  equal = function (current, other)
-    if (#other ~= 3) then error("bad argument #2 (expected 3 values, got " .. #other .. ")", 2) end
-    if (#current ~= 3) then error("bad argument #1 (expected 3 values, got " .. #other .. ")", 2) end
+---Compares two versions are returns whether or not the current version is greater
+---@deprecated Use version class instead
+---@param current any
+---@param other any
+---@return boolean
+function versionUtils.greaterThan(current, other)
+  if (#other ~= 3) then error("bad argument #2 (expected 3 values, got " .. #other .. ")", 2) end
+  if (#current ~= 3) then error("bad argument #1 (expected 3 values, got " .. #other .. ")", 2) end
 
-    for i in #current do
-      if (current[i] ~= other[i]) then return false end
+  for i=1,#current do
+    if (current[i] > other[i]) then
+      return true
+    elseif (current[i] < other[i]) then
+      return false
     end
+  end
 
-    return true
-  end,
-
-  ---Compares two versions and returns whether or not the current version is lower
-  ---@deprecated Use version class instead
-  ---@param current number[] Current version, as a table
-  ---@param other number[] Other version, as a table
-  ---@return boolean
-  lessThan = function (current, other)
-    if (#other ~= 3) then error("bad argument #2 (expected 3 values, got " .. #other .. ")", 2) end
-    if (#current ~= 3) then error("bad argument #1 (expected 3 values, got " .. #other .. ")", 2) end
-
-    for i=1,#current do
-      if (current[i] < other[i]) then
-        return true
-      elseif (current[i] > other[i]) then
-        return false
-      end
-    end
-
-    return false
-  end,
-
-  ---Compares two versions are returns whether or not the current version is greater
-  ---@deprecated Use version class instead
-  ---@param current any
-  ---@param other any
-  ---@return boolean
-  greaterThan = function (current, other)
-    if (#other ~= 3) then error("bad argument #2 (expected 3 values, got " .. #other .. ")", 2) end
-    if (#current ~= 3) then error("bad argument #1 (expected 3 values, got " .. #other .. ")", 2) end
-
-    for i=1,#current do
-      if (current[i] > other[i]) then
-        return true
-      elseif (current[i] < other[i]) then
-        return false
-      end
-    end
-
-    return false
-  end,
-}
+  return false
+end
 
 local function checkHttp()
   if (not http) then
@@ -100,44 +99,43 @@ local function checkHttp()
   end
 end
 
-local github
-github = {
-  ---Gets a file from a GitHub repo
-  ---@param repo string Repository to look in, should be formatted as Author/Repo
-  ---@param location string String location of the file
-  ---@param branch? string Defaults to 'master'
-  ---@return string file data as string
-  getFile = function (repo, location, branch)
-    checkHttp()
-    branch = branch or "master"
-    local response, err = http.get("https://raw.githubusercontent.com/" .. textutils.urlEncode(repo) .. "/refs/heads/" .. textutils.urlEncode(branch) .. "/" .. location .. "?cb=" .. ("%x"):format(math.random(0, 2^30)))
-    if (response) then
-      local res = response.readAll()
-      response.close()
-      if (not res) then error("couldn't read file (empty response, possibly nonexistent file)") end
-      return res
-    end
+local github = {}
 
-    error("couldn't read file (" .. tostring(err) .. ")", 2)
-  end,
-
-  ---Gets a file from a GitHub repo, then executes it
-  ---@param repo string Repository to look in, should be formatted as Author/Repo
-  ---@param location string String location of the file
-  ---@param branch? string Defaults to 'master'
-  ---@param env? table Environment to pass, defaults to _ENV
-  ---@param ... any Arguments to pass to the script
-  ---@return any? return Whatever the executed script returns, or nil if it couldn't be executed
-  runFile = function (repo, location, branch, env, ...)
-    checkHttp()
-    branch = branch or "master"
-    local file = github.getFile(repo, location)
-
-    local func, err = load(file, location .. "@" .. repo .. " (GitHub)", "t", env)
-    if (not func) then error("couldn't load file (" .. err .. ")", 2) end
-    pcall(func, ...)
+---Gets a file from a GitHub repo
+---@param repo string Repository to look in, should be formatted as Author/Repo
+---@param location string String location of the file
+---@param branch? string Defaults to 'master'
+---@return string file data as string
+function github.getFile(repo, location, branch)
+  checkHttp()
+  branch = branch or "master"
+  local response, err = http.get("https://raw.githubusercontent.com/" .. textutils.urlEncode(repo) .. "/refs/heads/" .. textutils.urlEncode(branch) .. "/" .. location .. "?cb=" .. ("%x"):format(math.random(0, 2^30)))
+  if (response) then
+    local res = response.readAll()
+    response.close()
+    if (not res) then error("couldn't read file (empty response, possibly nonexistent file)") end
+    return res
   end
-}
+
+  error("couldn't read file (" .. tostring(err) .. ")", 2)
+end
+
+---Gets a file from a GitHub repo, then executes it
+---@param repo string Repository to look in, should be formatted as Author/Repo
+---@param location string String location of the file
+---@param branch? string Defaults to 'master'
+---@param env? table Environment to pass, defaults to _ENV
+---@param ... any Arguments to pass to the script
+---@return any? return Whatever the executed script returns, or nil if it couldn't be executed
+function github.runFile(repo, location, branch, env, ...)
+  checkHttp()
+  branch = branch or "master"
+  local file = github.getFile(repo, location)
+
+  local func, err = load(file, location .. "@" .. repo .. " (GitHub)", "t", env)
+  if (not func) then error("couldn't load file (" .. err .. ")", 2) end
+  pcall(func, ...)
+end
 
 --[[===Code===]]--
 
@@ -176,7 +174,7 @@ local function findReylib()
     if (f ~= nil) then
       found = true
 ---@diagnostic disable-next-line: undefined-field
-      version = versionfns.parse(f:read())
+      version = versionUtils.parse(f:read())
 
       f:close()
     end
@@ -230,7 +228,7 @@ local function main()
       -- update
       local shouldUpdate = true
       local rawLatestVersion = github.getFile("Reycko/CCT-Reylib", "VERSION")
-      shouldUpdate = versionfns.lessThan(rlVersion, versionfns.parse(rawLatestVersion))
+      shouldUpdate = versionUtils.lessThan(rlVersion, versionUtils.parse(rawLatestVersion))
       if (not args["auto"] and not shouldUpdate) then
         shouldUpdate = ask("You already have the latest version of Reylib.\nAre you sure you want to download it anyway?", nil, true)
       end
