@@ -241,12 +241,12 @@ local function main()
 
       if (shouldUpdate) then
         print("Downloading " .. rawLatestVersion .. ".")
-        github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", rawLatestVersion, _G)
+        github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", rawLatestVersion, _G, "version", rawLatestVersion)
       end
     else
       -- remove
       if (not fs.exists("/libs/reylib/programs/remove.lua")) then
-        print("Couldn't find remover. Downloading latest one.")
+        print("Couldn't find remover. Downloading it from GitHub.")
         github.runFile("Reycko/CCT-Reylib", "src/programs/remove.lua", table.concat(rlVersion, "."), _G)
       else
 ---@diagnostic disable-next-line: undefined-field
