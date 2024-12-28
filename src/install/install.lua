@@ -106,11 +106,13 @@ local installScripts = {
 }
 
 -- Parse arguments
-local args = { ---@type { [string]: boolean }
+local args = { ---@type { ["silent"]: boolean, ["version"]: string }
   ["silent"] = false,
+  ["version"] = "master",
 }
 
-for _, rawArg in pairs({ ... }) do
+local rawArgs = { ... }
+for i, rawArg in pairs(rawArgs) do
   rawArg = type(rawArg) == "string" and rawArg or "" ---@type string
   local arg = rawArg
   local setTo = true
@@ -119,7 +121,13 @@ for _, rawArg in pairs({ ... }) do
     arg = arg:sub(4)
   end
 
-  args[arg:lower()] = setTo
+  if (arg:lower() == "version") then
+    print("found version!!")
+    print(rawArgs[i + 1])
+    args["version"] = rawArgs[i + 1] or "master"
+  else
+    args[arg:lower()] = setTo
+  end
 end
 
 fs.delete("/libs/reylib")
@@ -129,7 +137,7 @@ fs.makeDir("/libs/reylib")
 ---@param path string Path
 ---@return boolean downloaded
 local function downloadFile(path)
-  local data = github.getFile("Reycko/CCT-Reylib", path)
+  local data = github.getFile("Reycko/CCT-Reylib", path, args["version"])
 
   local f, err = fs.open("/libs/reylib/" .. (path:sub(1, 4) == "src/" and path:sub(4) or path), "w")
   if (not f) then error("couldn't open file (" .. err .. ")", 2) end
@@ -141,7 +149,6 @@ end
 
 
 local loadFiles
-
 ---@param path string
 ---@return table
 loadFiles = function (path)
@@ -180,6 +187,10 @@ end
 
 print("[Reylib installer started]")
 
+if (args["version"] == "master") then
+  print("WARN: Version is 'master', download might be of a work-in-progress version.")
+end
+
 for current_file, file in pairs(files) do
   downloadFile(file)
   print("Downloaded " .. file .. " (" .. current_file .. "/" .. #files .. ")")
@@ -188,10 +199,10 @@ end
 print("[Running install scripts]")
 local scripts_ran = 0
 local scripts_to_run = 0
-for _, _ in pairs(installScripts) do scripts_to_run = scripts_to_run + 1 end -- HACK: #tbl only works for 'array' tables
+for _ in pairs(installScripts) do scripts_to_run = scripts_to_run + 1 end -- HACK: #tbl only works for 'array' tables
 -- Run install scripts
-for location, args in pairs(installScripts) do
-  github.runFile("Reycko/CCT-Reylib", location, "master", nil, table.unpack(args))
+for location, scriptArgs in pairs(installScripts) do
+  github.runFile("Reycko/CCT-Reylib", location, args["version"], nil, table.unpack(scriptArgs))
   scripts_ran = scripts_ran + 1
   print("Ran install script " .. location .. " (" .. scripts_ran .. "/" .. scripts_to_run .. ")")
 end
