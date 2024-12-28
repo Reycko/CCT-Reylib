@@ -137,6 +137,32 @@ function github.runFile(repo, location, branch, env, ...)
   pcall(func, ...)
 end
 
+local cliUtils = {}
+
+---Asks a question, then returns yes/no.
+---@param question string What to ask
+---@param choices? table 1 letter choices, first value is yes, second is no
+---@param default_no? boolean Default to no instead of yes
+function cliUtils.ask(question, choices, default_no)
+  default_no = default_no or false
+  choices = choices or {"y", "n"}
+  for _, choice in pairs(choices) do
+    choice = choice:lower():sub(1, 1)
+  end
+
+  local autocomplete_function = function (partial) require("cc.completion").choice(partial, choices) end
+  local yes_text = (default_no and choices[1] or choices[1]:upper())
+  local no_text = (default_no and choices[2]:upper() or choices[2])
+
+  print(question .. " [" .. yes_text .. "/" .. no_text .. "]")
+  local input = read(nil, nil, autocomplete_function):lower():sub(1, 1)
+  if (default_no) then
+    return input == choices[1]
+  else
+    return input ~= choices[2]
+  end
+end
+
 --[[===Code===]]--
 
 -- Parse arguments
@@ -183,25 +209,6 @@ local function findReylib()
   return found, version
 end
 
----Asks question, then returns yes/no.
----@param question string What to ask
----@param choices? table 1 letter choices, first value is yes, second is no
----@param default_no? boolean Default to no instead of yes
-local function ask(question, choices, default_no)
-  if (args["auto"]) then return not default_no end
-  default_no = default_no or false
-  choices = choices or {"y", "n"}
-
-  local autocomplete_function = function (partial) require("cc.completion").choice(partial, choices) end
-  print(question .. " [" .. (not default_no and choices[1]:upper() or choices[1]:lower()) .. "/" .. (default_no and choices[2]:upper() or choices[2]:lower()) .. "]")
-  local input = read(nil, nil, autocomplete_function):lower():sub(1, 1)
-  if (default_no) then
-    return input == choices[1]:lower()
-  else
-    return input ~= choices[2]:lower()
-  end
-end
-
 local _print = print
 ---Wraps print to hide when silent.
 local function print(...)
@@ -221,27 +228,26 @@ local function main()
     return false
   end
 
+  local rawLatestVersion = github.getFile("Reycko/CCT-Reylib", "VERSION")
   local rlDownloaded, rlVersion = findReylib()
 
   if (rlDownloaded) then
-    if (not args["auto"] and ask("Reylib is already downloaded (v" .. table.concat(rlVersion, ".") .. ").\nDo you want to update [u] or remove [r]?", {"u", "r"}) or (args["update"] and not args["remove"])) then
+    if (not args["auto"] and cliUtils.ask("Reylib is already downloaded (v" .. table.concat(rlVersion, ".") .. ").\nThe latest version is v" .. rawLatestVersion .. "\nDo you want to update [u] or remove [r]?", {"u", "r"}) or (args["update"] and not args["remove"])) then
       -- update
-      local shouldUpdate = true
-      local rawLatestVersion = github.getFile("Reycko/CCT-Reylib", "VERSION")
-      shouldUpdate = versionUtils.lessThan(rlVersion, versionUtils.parse(rawLatestVersion))
+      local shouldUpdate = versionUtils.lessThan(rlVersion, versionUtils.parse(rawLatestVersion))
       if (not args["auto"] and not shouldUpdate) then
-        shouldUpdate = ask("You already have the latest version of Reylib.\nAre you sure you want to download it anyway?", nil, true)
+        shouldUpdate = cliUtils.ask("You already have the latest version of Reylib.\nAre you sure you want to download it anyway?", nil, true)
       end
 
       if (shouldUpdate) then
         print("Downloading " .. rawLatestVersion .. ".")
-        github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", "master", _G)
+        github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", rawLatestVersion, _G)
       end
     else
       -- remove
       if (not fs.exists("/libs/reylib/programs/remove.lua")) then
         print("Couldn't find remover. Downloading latest one.")
-        github.runFile("Reycko/CCT-Reylib", "src/programs/remove.lua", "master", _G)
+        github.runFile("Reycko/CCT-Reylib", "src/programs/remove.lua", table.concat(rlVersion, "."), _G)
       else
 ---@diagnostic disable-next-line: undefined-field
         os.run({}, "/libs/reylib/programs/remove.lua")
@@ -249,9 +255,9 @@ local function main()
     end
 
   else
-    if (not args["auto"] and ask("Do you want to download Reylib?") or (args["download"])) then
+    if (not args["auto"] and cliUtils.ask("Do you want to download Reylib?") or (args["download"])) then
           print("Downloading Reylib.")
-          github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", "master", _G)
+          github.runFile("Reycko/CCT-Reylib", "src/install/install.lua", rawLatestVersion, _G)
 
           return true
     end
