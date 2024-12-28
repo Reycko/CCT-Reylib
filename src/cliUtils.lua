@@ -7,8 +7,8 @@ local cliUtils = {}
 function cliUtils.ask(question, choices, default_no)
   default_no = default_no or false
   choices = choices or {"y", "n"}
-  for _, choice in pairs(choices) do
-    choice = choice:lower():sub(1, 1)
+  for i, choice in pairs(choices) do
+    choices[i] = choice:lower():sub(1, 1)
   end
 
   local autocomplete_function = function (partial) require("cc.completion").choice(partial, choices) end
